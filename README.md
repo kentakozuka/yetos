@@ -1,106 +1,240 @@
 # MikanOS-devcontainer
 
-[ゼロからのOS自作入門](https://zero.osdev.jp/) で開発するOS (MikanOS) の
-開発環境が設定された [VSCode Devcontainer](https://code.visualstudio.com/docs/remote/containers) 設定ファイル.
+MikanOS を M1 Mac のエミュレータ上で動かすためのドキュメント & スクリプト。
 
-ベースイメージの詳細については [github.com/sarisia/mikanos-docker](https://github.com/sarisia/mikanos-docker)
-を参照してください.
+動作確認環境
+```sh
+> uname -a 
+Darwin Kentas-MacBook-Air.local 21.5.0 Darwin Kernel Version 21.5.0: Tue Apr 26 21:08:29 PDT 2022; root:xnu-8020.121.3~4/RELEASE_ARM64_T8101 arm64
+```
 
-使用例: [github.com/sarisia/mikanos](https://github.com/sarisia/mikanos)
+- 元の書籍
+[ゼロからのOS自作入門](https://book.mynavi.jp/ec/products/detail/id=121220)
+  - [mikanos-build](https://github.com/uchan-nos/mikanos-build): ビルド手順およびツール群
 
-# 使い方
-
-## テンプレートからリポジトリを作成
-
-1. 当リポジトリページの右上 "Use this template" からリポジトリを作成 ([GitHub Docs](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-from-a-template))
-
-2. ローカルにチェックアウト
-
-3. VSCode で devcontainer を開く ([VSCode Docs](https://code.visualstudio.com/docs/remote/containers#_quick-start-open-an-existing-folder-in-a-container))
-
-4. 本の手順に従い [VcXsrv](https://sourceforge.net/projects/vcxsrv/) を導入, 起動することで,
-QEMU での動作確認ができます
-
-## 既存のリポジトリに追加
-
-当リポジトリの `.devcontainer` ディレクトリ, 及び含まれるファイルをダウンロードし,
-既存のリポジトリに追加してください.
-
-# M1 Mac で使う
-
-クロスコンパイル関連の追加の設定が必要です.
-[`mikanos-docker` のドキュメント](https://github.com/sarisia/mikanos-docker#m1-mac-%E3%81%A7%E3%81%AE%E5%8B%95%E4%BD%9C%E3%81%AF) を参照して下さい.
+- 基本この記事の著者のツールを使っています。
+[Docker ではじめる "ゼロからのOS自作入門"](https://zenn.dev/sarisia/articles/6b57ea835344b6)
+  - このリポジトリのテンプレ: [sarisia/mikanos-devcontainer](https://github.com/sarisia/mikanos-devcontainer)
+  - Dockerfileはこちら: [sarisia/mikanos-docker](https://github.com/sarisia/mikanos-docker)
+- とても為になった記事
+[「ゼロからのOS自作入門」の副読本的記事](https://zenn.dev/karaage0703/articles/1bdb8930182c6c)
 
 
-# WSLg で動作確認
+## セットアップ
 
-Windows 11, 及び Windows 10 21362以降では, [WSLg](https://github.com/microsoft/wslg) を
-利用することで, VcXsrv などを導入せずに QEMU での動作確認が可能です.
+最初の1回でよい。
 
-## 設定
+```sh
+# MikanOSのクローン
+cd $WS_DIR
+git clone https://github.com/uchan-nos/mikanos.git
+# やらなくても良いがコードが見やすいので
+ln -s ~/osbook /workspaces/mikanos-devcontainer/
+ln -s ~/edk2 /workspaces/mikanos-devcontainer/
+```
 
-1. [WSLg ドキュメント](https://github.com/microsoft/wslg) に従い, WSLg を有効化
-2. `.devcontainer/devcontainer.json` に設定を追加
+## M1 Mac で必要な手順
 
-    最新の [`.devcontainer/devcontainer.json`](https://github.com/sarisia/mikanos-devcontainer/blob/master/.devcontainer/devcontainer.json) を参考に, 以下の設定を追加:
+edk2のセットアップ
 
-    ```json
-    "mounts": [
-        "type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix"
-    ],
-    "containerEnv": {
-        "DISPLAY": "${localEnv:DISPLAY}"
-    },
-    ```
+```sh
+cd ~/edk2
+ln -s $MIKANOS_DIR/MikanLoaderPkg ./
+ln -s $MIKANOS_DIR/MikanLoaderPkg ./
+source edksetup.sh
+
+cp $WS_DIR/target.txt ~/edk2/Conf/target.txt
+cp $WS_DIR/tools_def.txt ~/edk2/Conf/tools_def.txt
+```
+
+## OVFM
+
+ビルド通らない。
+
+```sh
+cd ~/edk2
+source edksetup.sh
+cp $WS_DIR/target_ovfm.txt ~/edk2/Conf/target.txt
+cp $WS_DIR/tools_def.txt ~/edk2/Conf/tools_def.txt
+build
+ll ~/edk2/Build/
+```
+
+## YetOS
+
+```sh
+# Setup env vars for build.
+source ~/osbook/devenv/buildenv.sh
+echo $CPPFLAGS
+
+cd $YETOS_DIR/kernel
+clang++ $CPPFLAGS -O2 --target=x86_64-elf -fno-exceptions -ffreestanding -c main.cpp
+ld.lld $LDFLAGS --entry KernelMain -z norelro --image-base 0x100000 --static -o kernel.elf main.o
+
+cd ~/edk2
+ln -s $YETOS_DIR/YetLoaderPkg ~/edk2
+source edksetup.sh
+cp $WS_DIR/target_yetos.txt ~/edk2/Conf/target.txt
+cp $WS_DIR/tools_def.txt ~/edk2/Conf/tools_def.txt
+
+build
+
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/YetLoaderX64/DEBUG_CLANG38/X64/Loader.efi $YETOS_DIR/kernel/kernel.elf
+```
 
 
-# VNC イメージ
+## 1.4 エミュレータでのやり方
 
-VNC 設定を有効にすることで, ホストに X11 Server を用意すること無く, MikanOSの
-動作確認をすることが可能です. また, [GitHub Codespaces](https://github.com/features/codespaces)
-を利用することで, ブラウザのみでコーディング&動作確認を完結することができます.
+```sh
+cd ~/osbook/day01/bin/
+~/osbook/devenv/run_qemu.sh hello.efi
+```
 
-## 設定
 
-- 利用するイメージを `ghcr.io/sarisia/mikanos:vnc` に設定
+## 1.9 C言語でハローワールド
 
-    `.devcontainer/Dockerfile` を直接変更する, もしくは最新の
-    [`.devcontainer/devcontainer.json`](https://github.com/sarisia/mikanos-devcontainer/blob/master/.devcontainer/devcontainer.json)と [`.devcontainer/Dockerfile`](https://github.com/sarisia/mikanos-devcontainer/blob/master/.devcontainer/Dockerfile) を参考に設定して下さい.
+```sh
+cd ~/osbook/day01/c/
+clang -target x86_64-pc-win32-coff -mno-red-zone -fno-stack-protector -fshort-wchar -Wall -c hello.c
+lld-link /subsystem:efi_application /entry:EfiMain /out:hello.efi hello.o
 
-- devcontainer 設定を追加
+~/osbook/devenv/run_qemu.sh hello.efi
+```
 
-    最新の [`.devcontainer/devcontainer.json`](https://github.com/sarisia/mikanos-devcontainer/blob/master/.devcontainer/devcontainer.json) を参考に, 以下の設定を追加して下さい:
+## 2.2 EDK2でハローワールド
 
-    ```json
-    "forwardPorts": [6080],
-    "overrideCommand": false,
-    "containerEnv": {
-        // Port for noVNC Web Client & WebSocket
-        "NOVNC_PORT": "6080",
-        // VNC port QEMU listens. Default to 5900 + <display number>
-        // If you run QEMU with "-vnc :1", then VNC_PORT should be 5901.
-        "VNC_PORT": "5900",
-        // QEMU launch options. Used in `run_image.sh`
-        "QEMU_OPTS": "-vnc :0"
-    },
-    ```
-  
-## カスタマイズ
+ここから mikanos のリポジトリのコードを使う。
 
-環境変数を通じてカスタマイズが可能です. 詳細は [mikanos-docker ドキュメント](https://github.com/sarisia/mikanos-docker#%E3%82%AB%E3%82%B9%E3%82%BF%E3%83%9E%E3%82%A4%E3%82%BA)
-を参照して下さい.
+```sh
+cd $MIKANOS_DIR
+git reset --hard osbook_day02a
 
-# トラブルシューティング
+cd ~/edk2
+build
 
-[`sarisia/mikanos-docker` の Wiki をご確認ください.](https://github.com/sarisia/mikanos-docker/wiki/Troubleshooting)
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi
+```
 
-# バグ, 要望
+## 2.7 メモリマップの確認
 
-[Twitter (@A1ces)](https://twitter.com/A1ces) や [Issues](https://github.com/sarisia/mikanos-devcontainer/issues) で教えてくださると嬉しいです！
+```sh
+cd $MIKANOS_DIR
+git reset --hard osbook_day02b
 
-# 参考
+# Setup EDK2
+cd ~/edk2
+ln -s /workspaces/mikanos-devcontainer/mikanos/MikanLoaderPkg ./
+source edksetup.sh
 
-- [Docker ではじめる "ゼロからのOS自作入門" | Zenn](https://zenn.dev/sarisia/articles/6b57ea835344b6)
-- [ブラウザだけでOS自作入門しよう | Zenn](https://zenn.dev/sarisia/articles/8dbe4fe2f1c656)
-- [「ゼロからのOS自作入門」の副読本的記事 | Zenn](https://zenn.dev/karaage0703/articles/1bdb8930182c6c)
-    - devcontainer の起動方法や, macOS での X11 Server の設定などが大変分かりやすく説明されています
+# Configure for cross compile.
+cp /workspaces/mikanos-devcontainer/target.txt ~/edk2/Conf/target.txt
+
+# EDK2 setup
+cp /workspaces/mikanos-devcontainer/target.txt ~/edk2/Conf/target.txt
+
+cd ~/edk2
+build
+
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi
+```
+
+## 3.3 初めてのカーネル
+
+```sh
+cd $MIKANOS_DIR
+git reset --hard osbook_day03a
+cd kernel
+clang++ -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone -fno-exceptions -fno-rtti -std=c++17 -c main.cpp
+ld.lld --entry KernelMain -z norelro --image-base 0x100000 --static -o kernel.elf main.o
+
+cd ~/edk2
+source edksetup.sh
+source /workspaces/mikanos-devcontainer/m1_setup.sh
+build
+
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi $MIKANOS_DIR/kernel/kernel.elf
+```
+
+## 3.4 ブートローダからピクセルを描く
+
+```sh
+cd $MIKANOS_DIR
+git reset --hard osbook_day03b
+cd kernel
+clang++ -O2 -Wall -g --target=x86_64-elf -ffreestanding -mno-red-zone -fno-exceptions -fno-rtti -std=c++17 -c main.cpp
+ld.lld --entry KernelMain -z norelro --image-base 0x100000 --static -o kernel.elf main.o
+
+cd ~/edk2
+source edksetup.sh
+source /workspaces/mikanos-devcontainer/m1_setup.sh
+build
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi $MIKANOS_DIR/kernel/kernel.elf
+```
+
+## 3.5 カーネルからピクセルを描く
+
+```sh
+source ~/osbook/devenv/buildenv.sh
+echo $CPPFLAGS
+cd $MIKANOS_DIR
+git reset --hard osbook_day03c
+cd kernel
+clang++ $CPPFLAGS -O2 --target=x86_64-elf -fno-exceptions -ffreestanding -c main.cpp
+ld.lld $LDFLAGS --entry KernelMain -z norelro --image-base 0x100000 --static -o kernel.elf main.o
+cd ~/edk2
+source edksetup.sh
+source /workspaces/mikanos-devcontainer/m1_setup.sh
+build
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi $MIKANOS_DIR/kernel/kernel.elf
+```
+
+## 4.2 ピクセルを自在に描く
+
+```sh
+cd $MIKANOS_DIR
+git reset --hard osbook_day04b
+cd kernel
+source ~/osbook/devenv/buildenv.sh
+make
+
+cd ~/edk2
+source edksetup.sh
+source /workspaces/mikanos-devcontainer/m1_setup.sh
+
+build
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi $MIKANOS_DIR/kernel/kernel.elf
+```
+
+## 5.1 文字を書いてみる
+
+```sh
+cd $MIKANOS_DIR
+git reset --hard osbook_day05a
+cd kernel
+source ~/osbook/devenv/buildenv.sh
+make
+
+cd ~/edk2
+source edksetup.sh
+source /workspaces/mikanos-devcontainer/m1_setup.sh
+
+build
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi $MIKANOS_DIR/kernel/kernel.elf
+```
+
+## Masterブランチの MikanOS を動かす
+
+```sh
+cd $MIKANOS_DIR
+git reset --hard master
+cd kernel
+source ~/osbook/devenv/buildenv.sh
+make
+
+cd ~/edk2
+source edksetup.sh
+source /workspaces/mikanos-devcontainer/m1_setup.sh
+build
+
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi $MIKANOS_DIR/kernel/kernel.elf
+```
