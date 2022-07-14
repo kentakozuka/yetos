@@ -1,4 +1,4 @@
-# MikanOS-devcontainer
+# YetOS
 
 MikanOS を M1 Mac のエミュレータ上で動かすためのドキュメント & スクリプト。
 
