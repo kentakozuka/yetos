@@ -1,3 +1,6 @@
 .vscode
 *.elf
 *.o
+*.bin
+*.img
+*.d

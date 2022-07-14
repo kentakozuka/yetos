@@ -19,7 +19,6 @@ Darwin Kentas-MacBook-Air.local 21.5.0 Darwin Kernel Version 21.5.0: Tue Apr 26 
 - とても為になった記事
 [「ゼロからのOS自作入門」の副読本的記事](https://zenn.dev/karaage0703/articles/1bdb8930182c6c)
 
-
 ## セットアップ
 
 最初の1回でよい。
@@ -28,23 +27,9 @@ Darwin Kentas-MacBook-Air.local 21.5.0 Darwin Kernel Version 21.5.0: Tue Apr 26 
 # MikanOSのクローン
 cd $WS_DIR
 git clone https://github.com/uchan-nos/mikanos.git
-# やらなくても良いがコードが見やすいので
+# やらなくても良い、がコードが見やすいので
 ln -s ~/osbook /workspaces/mikanos-devcontainer/
 ln -s ~/edk2 /workspaces/mikanos-devcontainer/
-```
-
-## M1 Mac で必要な手順
-
-edk2のセットアップ
-
-```sh
-cd ~/edk2
-ln -s $MIKANOS_DIR/MikanLoaderPkg ./
-ln -s $MIKANOS_DIR/MikanLoaderPkg ./
-source edksetup.sh
-
-cp $WS_DIR/target.txt ~/edk2/Conf/target.txt
-cp $WS_DIR/tools_def.txt ~/edk2/Conf/tools_def.txt
 ```
 
 ## OVFM
@@ -67,12 +52,12 @@ ll ~/edk2/Build/
 source ~/osbook/devenv/buildenv.sh
 echo $CPPFLAGS
 
+# Build kernel.
 cd $YETOS_DIR/kernel
-clang++ $CPPFLAGS -O2 --target=x86_64-elf -fno-exceptions -ffreestanding -c main.cpp
-ld.lld $LDFLAGS --entry KernelMain -z norelro --image-base 0x100000 --static -o kernel.elf main.o
+make clean && make
 
 cd ~/edk2
-ln -s $YETOS_DIR/YetLoaderPkg ~/edk2
+ln -s $YETOS_DIR/YetLoaderPkg ~/edk2/
 source edksetup.sh
 cp $WS_DIR/target_yetos.txt ~/edk2/Conf/target.txt
 cp $WS_DIR/tools_def.txt ~/edk2/Conf/tools_def.txt
@@ -108,6 +93,7 @@ lld-link /subsystem:efi_application /entry:EfiMain /out:hello.efi hello.o
 ```sh
 cd $MIKANOS_DIR
 git reset --hard osbook_day02a
+find . -type f -name '*.d' -delete -o -name '*.o' -delete
 
 cd ~/edk2
 build
@@ -215,10 +201,32 @@ source ~/osbook/devenv/buildenv.sh
 make
 
 cd ~/edk2
+rm -fr ~/edk2/MikanLoaderPkg && ln -s $MIKANOS_DIR/MikanLoaderPkg ~/edk2/
 source edksetup.sh
 source /workspaces/mikanos-devcontainer/m1_setup.sh
-
 build
+
+~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi $MIKANOS_DIR/kernel/kernel.elf
+```
+
+## 5.1 文字を書いてみる
+
+```sh
+$MIKANOS_DIR/tools/makefont.py -o $MIKANOS_DIR/kernel/hankaku.bin $MIKANOS_DIR/kernel/hankaku.txt
+objcopy -I binary -O elf64-x86-64 -B aarm:x86-64 $MIKANOS_DIR/kernel/hankaku.bin $OS_DIR/kernel/hankaku.o
+
+cd $MIKANOS_DIR
+git reset --hard osbook_day05d
+cd kernel
+source ~/osbook/devenv/buildenv.sh
+make clean && make
+
+cd ~/edk2
+rm -fr ~/edk2/MikanLoaderPkg && ln -s $MIKANOS_DIR/MikanLoaderPkg ~/edk2/
+source edksetup.sh
+source /workspaces/mikanos-devcontainer/m1_setup.sh
+build
+
 ~/osbook/devenv/run_qemu.sh ~/edk2/Build/MikanLoaderX64/DEBUG_CLANG38/X64/Loader.efi $MIKANOS_DIR/kernel/kernel.elf
 ```
 
