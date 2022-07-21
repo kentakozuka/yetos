@@ -1,21 +1,14 @@
 {
-	"name": "MikanOS",
+	"name": "YetOS",
 	"build": {
 		"dockerfile": "Dockerfile",
 	},
-	// "settings": {
-	// 	"terminal.integrated.profiles.linux": {
-	// 		"bash": {
-	// 			"path": "/bin/bash"
-	// 		},
-	// 	},
-	// 	"terminal.integrated.defaultProfile.linux": "bash",
-	// },
 	"extensions": [
 		"ms-vscode.cpptools",
 		"ms-vscode.hexeditor",
 		"shd101wyy.markdown-preview-enhanced",
 		"walonli.edk2-vscode",
+		"moshfeu.compare-folders",
 	],
 	"remoteUser": "vscode",
 	"runArgs": [
@@ -23,8 +16,8 @@
 		"--disable-content-trust=true"
 	],
 	"containerEnv": {
-		"WS_DIR": "/workspaces/mikanos-devcontainer",
-		"MIKANOS_DIR": "/workspaces/mikanos-devcontainer/mikanos",
-		"YETOS_DIR": "/workspaces/mikanos-devcontainer/yetos"
+		"WS_DIR": "/workspaces/yetos",
+		"MIKANOS_DIR": "/workspaces/yetos/mikanos",
+		"YETOS_DIR": "/workspaces/yetos/yetos"
 	},
 }

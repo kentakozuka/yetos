@@ -24,6 +24,7 @@ RUN apt-get update \
     dosfstools \
     git \
     python3-distutils \
+    peco \
     # for arm64 cross-compile
     libc6-dev-amd64-cross \
     binutils-x86-64-linux-gnu \

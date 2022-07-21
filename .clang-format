@@ -1,5 +1,5 @@
-BasedOnStyle: llvm
 AlignAfterOpenBracket: AlwaysBreak
+AlignConsecutiveDeclarations: true
 AlignTrailingComments: true
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
@@ -9,8 +9,10 @@ AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLambdasOnASingleLine: Empty
 AllowShortLoopsOnASingleLine: false
+BasedOnStyle: llvm
 BinPackArguments: false
 BinPackParameters: false
+BreakBeforeBraces: Custom
 ColumnLimit: 85
 IndentWidth: 2
-BreakBeforeBraces: Custom
+SortIncludes: false
