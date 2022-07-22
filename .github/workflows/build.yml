@@ -1,0 +1,29 @@
+name: build
+on:
+  push:
+    branches:
+      - 'master'
+    tags-ignore:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_IMAGE: ghcr.io/kentakozuka/vscode-dev-containers-multiarch/base:ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - uses: docker/login-action@v1
+        with: 
+          registry: ghcr.io
+          username: kentakozuka
+          password: ${{ github.token }}
+      - uses: docker/setup-qemu-action@v1
+        with:
+          platforms: arm64
+      - run: |
+          cd vscode-dev-containers/containers/ubuntu/.devcontainer
+          docker buildx build --platform linux/arm64 -t ${{ env.TARGET_IMAGE }} --push --build-arg VARIANT=focal --file base.Dockerfile .
